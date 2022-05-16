@@ -35,6 +35,11 @@ DEBUG = os.getenv('DEBUG') == "True"
 ALLOWED_HOSTS = get_list(os.getenv('ALLOWED_HOSTS_IP', '0.0.0.0'))
 ALLOWED_HOSTS += get_list(os.getenv('ALLOWED_HOSTS_DOMAIN', None))
 
+#Telegram
+TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
+ADMINS = tuple(map(int, os.environ.get("ADMINS", "").split(',')))
+USE_REDIS = bool(os.environ.get("USE_REDIS"))
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -160,6 +165,20 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+"""
+////////////////////
+Настройки Celery
+////////////////////
+"""
+
+CELERY_TIMEZONE = "Europe/Moscow"
+CELERY_TASK_TRACK_STARTED = True
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_BROKER_TRANSPORT_OPTIONS = {'vasability_timeout': 3600}  # возможно поменять на visibility
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.2/topics/i18n/

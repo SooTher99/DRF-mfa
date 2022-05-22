@@ -3,8 +3,9 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework.validators import UniqueValidator
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenObtainSerializer
 from .models import User
+from ..tele_cod.models import TelegramBotModel
 from rest_framework import serializers
-from .validators import validate_letters
+from .validators import validate_letters, pass_gen
 from trench.utils import UserTokenGenerator
 
 user_token_generator = UserTokenGenerator()
@@ -44,7 +45,8 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         user.set_password(validated_data['password'])
         user.save()
-
+        user_bot = TelegramBotModel.objects.create(user=user, user_activation_key=pass_gen(8))
+        user_bot.save()
         return user
 
 

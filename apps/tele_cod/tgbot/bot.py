@@ -1,49 +1,53 @@
-import asyncio
-import logging
+# filters
+from .filters.admin_filter import AdminFilter
 
-from aiogram import Bot, Dispatcher
-# from aiogram.contrib.fsm_storage import redis
+# handlers
+from .handlers.admin import admin_user
+from .handlers.spam_command import anti_spam
+from .handlers.user import send_welcome, auth
 
-from .settings import config
+# middlewares
+from .middlewares.antiflood_middleware import antispam_func
 
+# states
+from .states.register_state import Register
 
-logger = logging.getLogger(__name__)
+# utils
+# from .utils.database import Database
 
+# telebot
+from telebot import TeleBot
 
-async def main():
-    logging.basicConfig(
-        level=logging.INFO,
-        format=u'%(filename)s:%(lineno)d #%(levelname)-8s [%(asctime)s] - %(name)s - %(message)s',
-    )
-    logger.info("Starting bot")
-    conf = config.load_config()
+# config
+from . import config
 
-    # storage = redis.RedisStorage2(
-    #     host=conf.cache_config.host,
-    #     port=conf.cache_config.port,
-    #     password=conf.cache_config.password)
+# db = Database()
 
-    bot = Bot(token=conf.tg_bot.token)
-    bot['config'] = conf
+# remove this if you won't use middlewares:
+from telebot import apihelper
 
-    dp = Dispatcher(bot) # storage=storage
-    config.register_all_services(dp)
+apihelper.ENABLE_MIDDLEWARE = True
 
-    try:
-        await dp.start_polling()
-    finally:
-        await dp.storage.close()
-        await dp.storage.wait_closed()
-        await bot.session.close()
+# I recommend increasing num_threads
+bot = TeleBot(config.TOKEN, num_threads=5)
 
 
-# if __name__ == '__main__':
-#     try:
-#         asyncio.run(main())
-#     except (KeyboardInterrupt, SystemExit):
-#         logger.error("Bot stopped!")
-def main_bot():
-    try:
-        asyncio.run(main())
-    except (KeyboardInterrupt, SystemExit):
-        logger.error("Bot stopped!")
+def register_handlers():
+    bot.register_message_handler(admin_user, commands=['start'], admin=True, pass_bot=True)
+    bot.register_message_handler(send_welcome, commands=['start'], admin=False, pass_bot=True)
+    bot.register_message_handler(anti_spam, commands=['spam'], pass_bot=True)
+    bot.register_message_handler(auth, func=lambda message: True, pass_bot=True)
+
+
+register_handlers()
+
+# Middlewares
+bot.register_middleware_handler(antispam_func, update_types=['message'])
+
+# custom filters
+bot.add_custom_filter(AdminFilter())
+
+
+def run():
+    bot.infinity_polling()
+

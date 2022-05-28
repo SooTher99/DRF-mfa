@@ -40,19 +40,19 @@ class UserManager(UserManagerDjango):
 class User(AbstractUser):
     username_validator = UnicodeUsernameValidator()
     username = models.CharField(
-        ('username'),
+        'username',
         max_length=150,
         blank=True,
         unique=False,
-        help_text=('Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.'),
+        help_text='Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.',
         validators=[username_validator],
         error_messages={
-            'unique': ("A user with that username already exists."),
+            'unique': "A user with that username already exists.",
         },
     )
-    first_name = models.CharField(('first name'), max_length=150)
-    last_name = models.CharField(('last name'), max_length=150)
-    email = models.EmailField(('email address'), unique=True)
+    first_name = models.CharField('first name', max_length=150)
+    last_name = models.CharField('last name', max_length=150)
+    email = models.EmailField('email address', unique=True)
     objects = UserManager()
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["password"]

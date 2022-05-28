@@ -11,7 +11,7 @@ from trench.utils import UserTokenGenerator
 user_token_generator = UserTokenGenerator()
 
 
-class RegisterSerializer(serializers.ModelSerializer):
+class DefaultRegisterSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(
         required=True,
         validators=[UniqueValidator(queryset=User.objects.all())]
@@ -45,12 +45,49 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         user.set_password(validated_data['password'])
         user.save()
-        user_bot = TelegramBotModel.objects.create(user=user, user_activation_key=pass_gen(8))
-        user_bot.save()
         return user
 
 
-class CustomJWTSerializer(TokenObtainPairSerializer):
+class TwoFactorRegisterSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(
+        required=True,
+        validators=[UniqueValidator(queryset=User.objects.all())]
+    )
+
+    first_name = serializers.CharField(validators=[validate_letters])
+    last_name = serializers.CharField(validators=[validate_letters])
+    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+    password2 = serializers.CharField(write_only=True, required=True)
+
+    class Meta:
+        model = User
+        fields = ('email', 'password', 'password2', 'first_name', 'last_name')
+        extra_kwargs = {
+            'first_name': {'required': True},
+            'last_name': {'required': True}
+        }
+
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password2']:
+            raise serializers.ValidationError({"password": "Password fields didn't match."})
+
+        return attrs
+
+    def create(self, validated_data):
+        user = User.objects.create(
+            email=validated_data['email'],
+            first_name=validated_data['first_name'],
+            last_name=validated_data['last_name'],
+        )
+        user.set_password(validated_data['password'])
+        user.save()
+        user_messenger = TelegramBotModel.objects.create(user=user, user_activation_key=pass_gen(8))
+        user_messenger.save()
+
+        return user
+
+
+class DefaultFactorSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         credentials = {
             'email': attrs.get("email"),
@@ -111,6 +148,11 @@ class FirstFactorSerializer(TokenObtainSingleSerializer):
         if not user.is_active:
             raise serializers.ValidationError(
                 {'authorisation Error': 'Account is not active'}
+            )
+
+        if not user.telegrambotmodel.user_id_messenger:
+            raise serializers.ValidationError(
+                {'authorisation Error': 'You are not logged in to the bot'}
             )
 
         return super().validate(credentials)

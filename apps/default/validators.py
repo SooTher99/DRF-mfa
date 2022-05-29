@@ -12,11 +12,13 @@ def validate_letters(name):
         raise ValidationError({"incorrect name": "Name must start with a capital letter"})
 
 
-def pass_gen(length):
+def pass_gen(length, numbers=True, letters=True):
     password = ''
     for i in range(0, length // 2):
-        password += random.choice(digits)
-        password += random.choice(ascii_uppercase)
+        if numbers:
+            password += random.choice(digits)
+        if letters:
+            password += random.choice(ascii_uppercase)
     return password
 
 

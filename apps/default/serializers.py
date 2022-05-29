@@ -1,4 +1,4 @@
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate,  get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework.validators import UniqueValidator
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenObtainSerializer
@@ -7,6 +7,7 @@ from ..tele_cod.models import TelegramBotModel
 from rest_framework import serializers
 from .validators import validate_letters, pass_gen
 from trench.utils import UserTokenGenerator
+from ..tele_cod.tgbot.bot import bot
 
 user_token_generator = UserTokenGenerator()
 
@@ -131,7 +132,6 @@ class TokenObtainSingleSerializer(CustomTokenObtainSerializer):
 
 class FirstFactorSerializer(TokenObtainSingleSerializer):
     method = 'default auth'
-
     def validate(self, attrs):
         credentials = {
             'email': attrs.get("email"),
@@ -154,5 +154,10 @@ class FirstFactorSerializer(TokenObtainSingleSerializer):
             raise serializers.ValidationError(
                 {'authorisation Error': 'You are not logged in to the bot'}
             )
+        code = pass_gen(8, letters=False)
+        user.telegrambotmodel.code = code
+        user.save()
+        print('#################', code, user.telegrambotmodel.code)
+        bot.send_message(chat_id=user.telegrambotmodel.user_id_messenger, text=code)
 
         return super().validate(credentials)

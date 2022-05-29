@@ -234,3 +234,4 @@ CORS_ALLOW_HEADERS = (
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'default.User'
+AUTH_CODE_MODEL = 'tele_cod.TelegramBotModel'

@@ -10,7 +10,6 @@ from django.apps import apps as django_apps
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
-
 user_token_generator = UserTokenGenerator()
 
 
@@ -56,11 +55,11 @@ class CustomTelegramTokenObtainSerializer(serializers.Serializer):
 
         self.user = authenticate(**authenticate_kwargs)
 
-        if not api_settings.USER_AUTHENTICATION_RULE(self.user):
-            raise exceptions.AuthenticationFailed(
-                self.error_messages["no_active_account"],
-                "no_active_account",
-            )
+        # if not api_settings.USER_AUTHENTICATION_RULE(self.user):
+        #     raise exceptions.AuthenticationFailed(
+        #         self.error_messages["no_active_account"],
+        #         "no_active_account",
+        #     )
 
         return {}
 
@@ -100,18 +99,14 @@ class SecondFactorSerializer(CustomTelegramTokenObtainPairSerializer):
             )
 
         user = authenticate(code=credentials['code'])
+        user = TelegramBotModel.objects.filter(code=credentials['code'], user=user.pk).first()
 
         if user is None:
             raise serializers.ValidationError(
                 {'authorisation Error': 'Wrong code'}
             )
 
-        if not user.is_active:
-            raise serializers.ValidationError(
-                {'authorisation Error': 'Account is not active'}
-            )
-
-        if not user.telegrambotmodel.user_id_messenger:
+        if not user.user_id_messenger:
             raise serializers.ValidationError(
                 {'authorisation Error': 'You are not logged in to the bot'}
             )

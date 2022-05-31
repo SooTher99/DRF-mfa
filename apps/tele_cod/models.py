@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 
 class TelegramBotModel(models.Model):
@@ -9,6 +10,7 @@ class TelegramBotModel(models.Model):
     user_id_messenger = models.IntegerField(blank=True, null=True, verbose_name='Id мессенджера пользователя')
     user_activation_key = models.CharField(max_length=32, verbose_name='Код активации бота')
     username = models.CharField(max_length=64, blank=True, null=True, verbose_name='Никнейм пользователя')
+    last_login = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         verbose_name = "Бот"

@@ -44,24 +44,24 @@ class CustomTelegramTokenObtainSerializer(serializers.Serializer):
         self.fields["ephemeral_token"] = serializers.CharField()
         self.fields[self.code_field] = serializers.CharField()
 
-    def validate(self, attrs):
-        authenticate_kwargs = {
-            self.code_field: attrs[self.code_field],
-        }
-        try:
-            authenticate_kwargs["request"] = self.context["request"]
-        except KeyError:
-            pass
-
-        self.user = authenticate(**authenticate_kwargs)
-
-        # if not api_settings.USER_AUTHENTICATION_RULE(self.user):
-        #     raise exceptions.AuthenticationFailed(
-        #         self.error_messages["no_active_account"],
-        #         "no_active_account",
-        #     )
-
-        return {}
+    # def validate(self, attrs):
+    #     authenticate_kwargs = {
+    #         self.code_field: attrs[self.code_field],
+    #     }
+    #     try:
+    #         authenticate_kwargs["request"] = self.context["request"]
+    #     except KeyError:
+    #         pass
+    #
+    #     self.user = authenticate(username='admin@gmail.com', password='qwe123456789')
+    #
+    #     if not api_settings.USER_AUTHENTICATION_RULE(self.user):
+    #         raise exceptions.AuthenticationFailed(
+    #             self.error_messages["no_active_account"],
+    #             "no_active_account",
+    #         )
+    #
+    #     return {}
 
     @classmethod
     def get_token(cls, user):
@@ -72,10 +72,9 @@ class CustomTelegramTokenObtainPairSerializer(CustomTelegramTokenObtainSerialize
     token_class = user_token_generator
     method = None
 
-    def validate(self, attrs):
-        data = super().validate(attrs)
-
-        ephemeral_token = self.get_token(self.user)
+    def validate(self, attrs, *args):
+        data = {}
+        ephemeral_token = self.get_token(args[0].user)
 
         data["Ephemeral token"] = ephemeral_token
         data["Method"] = self.method
@@ -86,20 +85,21 @@ class CustomTelegramTokenObtainPairSerializer(CustomTelegramTokenObtainSerialize
 class SecondFactorSerializer(CustomTelegramTokenObtainPairSerializer):
     method = 'code auth'
 
-    def validate(self, attrs):
+    def validate(self, attrs, *args):
         credentials = {
             'ephemeral_token': attrs.get("ephemeral_token"),
             'code': attrs.get("code"),
         }
-        user = user_token_generator.check_token(user=None, token=credentials['ephemeral_token'])
+        user_object = user_token_generator.check_token(user=None, token=credentials['ephemeral_token'])
 
-        if user is None:
+        if user_object is None:
             raise serializers.ValidationError(
                 {'authorisation Error': 'Invalid token'}
             )
 
-        user = authenticate(code=credentials['code'])
-        user = TelegramBotModel.objects.filter(code=credentials['code'], user=user.pk).first()
+        # user = authenticate(username='admin@gmail.com', password='qwe123456789')
+        user = TelegramBotModel.objects.filter(code=credentials['code'], user=user_object.pk).first()
+        # user = authenticate(code=credentials['code'], user=user_object)
 
         if user is None:
             raise serializers.ValidationError(
@@ -111,4 +111,4 @@ class SecondFactorSerializer(CustomTelegramTokenObtainPairSerializer):
                 {'authorisation Error': 'You are not logged in to the bot'}
             )
 
-        return super().validate(credentials)
+        return super().validate(credentials, user)

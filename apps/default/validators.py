@@ -1,7 +1,6 @@
 from rest_framework.serializers import ValidationError
 from string import punctuation, digits, ascii_uppercase
 import random
-from ..tele_cod.models import TelegramBotModel
 from .models import User
 
 

@@ -1,10 +1,6 @@
-from django.contrib.auth import authenticate
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework import serializers, exceptions
+from rest_framework import serializers
 from trench.utils import UserTokenGenerator
 from django.utils.translation import gettext_lazy as _
-from django.contrib.auth.models import update_last_login
-from rest_framework.settings import api_settings
 from .models import TelegramBotModel
 from django.apps import apps as django_apps
 from django.conf import settings
@@ -44,25 +40,6 @@ class CustomTelegramTokenObtainSerializer(serializers.Serializer):
         self.fields["ephemeral_token"] = serializers.CharField()
         self.fields[self.code_field] = serializers.CharField()
 
-    # def validate(self, attrs):
-    #     authenticate_kwargs = {
-    #         self.code_field: attrs[self.code_field],
-    #     }
-    #     try:
-    #         authenticate_kwargs["request"] = self.context["request"]
-    #     except KeyError:
-    #         pass
-    #
-    #     self.user = authenticate(username='admin@gmail.com', password='qwe123456789')
-    #
-    #     if not api_settings.USER_AUTHENTICATION_RULE(self.user):
-    #         raise exceptions.AuthenticationFailed(
-    #             self.error_messages["no_active_account"],
-    #             "no_active_account",
-    #         )
-    #
-    #     return {}
-
     @classmethod
     def get_token(cls, user):
         return cls.token_class.make_token(user)
@@ -97,9 +74,7 @@ class SecondFactorSerializer(CustomTelegramTokenObtainPairSerializer):
                 {'authorisation Error': 'Invalid token'}
             )
 
-        # user = authenticate(username='admin@gmail.com', password='qwe123456789')
         user = TelegramBotModel.objects.filter(code=credentials['code'], user=user_object.pk).first()
-        # user = authenticate(code=credentials['code'], user=user_object)
 
         if user is None:
             raise serializers.ValidationError(
@@ -110,5 +85,8 @@ class SecondFactorSerializer(CustomTelegramTokenObtainPairSerializer):
             raise serializers.ValidationError(
                 {'authorisation Error': 'You are not logged in to the bot'}
             )
+
+        user.code = None
+        user.save()
 
         return super().validate(credentials, user)

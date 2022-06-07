@@ -3,6 +3,7 @@ from django.contrib.auth.models import UserManager as UserManagerDjango
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
 
+
 class UserManager(UserManagerDjango):
     """Менеджер моделей для модели пользователя без поля имени пользователя."""
 

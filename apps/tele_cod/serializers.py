@@ -1,12 +1,56 @@
-from rest_framework import serializers
-from trench.utils import UserTokenGenerator
+from ..default.models import User
+from ..tele_cod.models import TelegramBotModel
+from ..default.validators import validate_letters, pass_gen
+
 from django.utils.translation import gettext_lazy as _
-from .models import TelegramBotModel
 from django.apps import apps as django_apps
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.contrib.auth.password_validation import validate_password
+from rest_framework.validators import UniqueValidator
+from rest_framework import serializers
+from trench.utils import UserTokenGenerator
 
 user_token_generator = UserTokenGenerator()
+
+
+class TwoFactorRegisterSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(
+        required=True,
+        validators=[UniqueValidator(queryset=User.objects.all())]
+    )
+
+    first_name = serializers.CharField(validators=[validate_letters])
+    last_name = serializers.CharField(validators=[validate_letters])
+    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+    password2 = serializers.CharField(write_only=True, required=True)
+
+    class Meta:
+        model = User
+        fields = ('email', 'password', 'password2', 'first_name', 'last_name')
+        extra_kwargs = {
+            'first_name': {'required': True},
+            'last_name': {'required': True}
+        }
+
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password2']:
+            raise serializers.ValidationError({"password": "Password fields didn't match."})
+
+        return attrs
+
+    def create(self, validated_data):
+        user = User.objects.create(
+            email=validated_data['email'],
+            first_name=validated_data['first_name'],
+            last_name=validated_data['last_name'],
+        )
+        user.set_password(validated_data['password'])
+        user.save()
+        user_messenger = TelegramBotModel.objects.create(user=user, user_activation_key=pass_gen(8))
+        user_messenger.save()
+
+        return user
 
 
 def get_code_model():

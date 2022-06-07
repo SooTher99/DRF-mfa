@@ -1,7 +1,8 @@
+from .models import User
+
 from rest_framework.serializers import ValidationError
 from string import punctuation, digits, ascii_uppercase
 import random
-from .models import User
 
 
 def validate_letters(name):

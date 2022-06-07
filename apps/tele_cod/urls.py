@@ -1,9 +1,11 @@
+from .views import MFASecondStepJWTView, RegisterApiForTwoFactors
+
 from django.urls import path
-from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
-from .views import MFASecondStepJWTView
+
 
 
 urlpatterns = [
+    # path('register/', RegisterApiForTwoFactors.as_view(), name='token_login_second'),
     path('login/code/', MFASecondStepJWTView.as_view(), name='token_login_second'),
 ]
 

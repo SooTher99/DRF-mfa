@@ -1,7 +1,6 @@
 from django.db import models
 
 
-
 class TelegramBotModel(models.Model):
     code = models.CharField(max_length=12, verbose_name='Код', blank=True, null=True)
     CODE_FIELD = 'code'

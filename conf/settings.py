@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     #applications
     'apps.default',
     'apps.tele_cod',
+    'apps.face_auth',
 ]
 
 SIMPLE_JWT = {
@@ -184,6 +185,11 @@ USE_TZ = True
 
 STATIC_ROOT = os.path.join(BASE_DIR, "static")
 STATIC_URL = '/static/'
+
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
+
+DLIB_ROOT = os.path.join(BASE_DIR, 'dlib_file')
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_ALLOW_ALL = True

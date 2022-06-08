@@ -1,12 +1,23 @@
+from .models import FaceDescriptionsModel
 from ..default.models import User
 from ..tele_cod.models import TelegramBotModel
-from .get_face_descriptor import get_descriptor
 from ..default.validators import validate_letters, pass_gen
+from .get_face_descriptor import get_descriptor
 
+from django.utils.translation import gettext_lazy as _
+from scipy.spatial import distance
+from django.apps import apps as django_apps
+from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.contrib.auth.password_validation import validate_password
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.validators import UniqueValidator
 from rest_framework import serializers
-from .models import FaceDescriptionsModel
+from trench.utils import UserTokenGenerator
+from rest_framework_simplejwt.settings import api_settings
+from django.contrib.auth.models import update_last_login
+
+user_token_generator = UserTokenGenerator()
 
 
 class PhotoSerializer(serializers.ModelSerializer):
@@ -56,7 +67,6 @@ class ThirdFactorRegisterSerializer(serializers.ModelSerializer):
         print(validated_data['facedescriptionsmodel']['photo'])
 
         user_face = FaceDescriptionsModel.objects.create(user=user,
-                                                         photo=validated_data['facedescriptionsmodel']['photo'],
                                                          description=get_descriptor(
                                                              validated_data['facedescriptionsmodel']['photo']))
 
@@ -64,3 +74,66 @@ class ThirdFactorRegisterSerializer(serializers.ModelSerializer):
 
         return user
 
+
+class CustomFaceAuthObtainSerializer(serializers.Serializer):
+    token_class = None
+
+    default_error_messages = {
+        "no_active_account": _("No active account found with the given credentials")
+    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields["ephemeral_token"] = serializers.CharField()
+        self.fields["photo"] = serializers.ImageField()
+
+    @classmethod
+    def get_token(cls, user):
+        return cls.token_class.for_user(user)
+
+
+class CustomFaceAuthObtainPairSerializer(CustomFaceAuthObtainSerializer):
+    token_class = RefreshToken
+    method = None
+
+    def validate(self, attrs, *args):
+        data = {}
+        refresh = self.get_token(args[0])
+
+        data["refresh"] = str(refresh)
+        data["access"] = str(refresh.access_token)
+
+        if api_settings.UPDATE_LAST_LOGIN:
+            update_last_login(None, args[0])
+
+        return data
+
+
+class FaceAuthrSerializer(CustomFaceAuthObtainPairSerializer):
+    method = 'face auth'
+
+    def validate(self, attrs, *args):
+        credentials = {
+            'ephemeral_token': attrs.get("ephemeral_token"),
+            'photo': attrs.get("photo"),
+        }
+        user = user_token_generator.check_token(user=None, token=credentials['ephemeral_token'])
+
+        if user is None:
+            raise serializers.ValidationError(
+                {'authorisation Error': 'Invalid token'}
+            )
+
+        print(credentials['photo'])
+        face_desc_incoming = get_descriptor(credentials['photo'])
+        face_desc_user = FaceDescriptionsModel.objects.filter(user=user.pk).first()
+
+        euclid_value = distance.euclidean(face_desc_incoming, face_desc_user.description)
+
+        if euclid_value > 0.551:
+            raise serializers.ValidationError(
+                {'authorisation error': 'You have not been authorized by face'}
+            )
+
+        return super().validate(credentials, user)

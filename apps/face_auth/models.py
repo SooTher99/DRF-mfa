@@ -8,9 +8,9 @@ def upload_to(instance, filename):
 
 class FaceDescriptionsModel(models.Model):
     description = ArrayField(models.FloatField())
+    photo = models.ImageField(upload_to=upload_to, blank=True, null=True)
     user = models.OneToOneField('default.User', on_delete=models.CASCADE,
                                 verbose_name='Пользователь')
-    photo = models.ImageField(upload_to=upload_to)
 
     class Meta:
         verbose_name = "Описание лица"

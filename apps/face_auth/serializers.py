@@ -64,11 +64,13 @@ class ThirdFactorRegisterSerializer(serializers.ModelSerializer):
         user_messenger = TelegramBotModel.objects.create(user=user, user_activation_key=pass_gen(8))
         user_messenger.save()
 
-        print(validated_data['facedescriptionsmodel']['photo'])
+        try:
+            face_descriptor = get_descriptor(validated_data['facedescriptionsmodel']['photo'])
+        except Exception:
+            raise serializers.ValidationError({'authorisation error': 'Face not recognized'})
 
         user_face = FaceDescriptionsModel.objects.create(user=user,
-                                                         description=get_descriptor(
-                                                             validated_data['facedescriptionsmodel']['photo']))
+                                                         description=face_descriptor)
 
         user_face.save()
 
@@ -124,11 +126,12 @@ class FaceAuthrSerializer(CustomFaceAuthObtainPairSerializer):
             raise serializers.ValidationError(
                 {'authorisation Error': 'Invalid token'}
             )
+        try:
+            face_desc_incoming = get_descriptor(credentials['photo'])
+        except Exception:
+            raise serializers.ValidationError({'authorisation error': 'Face not recognized'})
 
-        print(credentials['photo'])
-        face_desc_incoming = get_descriptor(credentials['photo'])
         face_desc_user = FaceDescriptionsModel.objects.filter(user=user.pk).first()
-
         euclid_value = distance.euclidean(face_desc_incoming, face_desc_user.description)
 
         if euclid_value > 0.551:

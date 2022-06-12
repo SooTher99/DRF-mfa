@@ -13,11 +13,12 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.validators import UniqueValidator
 from rest_framework import serializers
-from trench.utils import UserTokenGenerator
+# from trench.utils import UserTokenGenerator
+from ..tele_cod.custom_token import CustomUserTokenGenerator
 from rest_framework_simplejwt.settings import api_settings
 from django.contrib.auth.models import update_last_login
 
-user_token_generator = UserTokenGenerator()
+custom_user_tele_token_generator = CustomUserTokenGenerator()
 
 
 class PhotoSerializer(serializers.ModelSerializer):
@@ -101,13 +102,13 @@ class CustomFaceAuthObtainPairSerializer(CustomFaceAuthObtainSerializer):
 
     def validate(self, attrs, *args):
         data = {}
-        refresh = self.get_token(args[0])
+        refresh = self.get_token(args[0].user)
 
         data["refresh"] = str(refresh)
         data["access"] = str(refresh.access_token)
 
         if api_settings.UPDATE_LAST_LOGIN:
-            update_last_login(None, args[0])
+            update_last_login(None, args[0].user)
 
         return data
 
@@ -120,9 +121,9 @@ class FaceAuthrSerializer(CustomFaceAuthObtainPairSerializer):
             'ephemeral_token': attrs.get("ephemeral_token"),
             'photo': attrs.get("photo"),
         }
-        user = user_token_generator.check_token(user=None, token=credentials['ephemeral_token'])
+        user_tele_object = custom_user_tele_token_generator.check_token(user=None, token=credentials['ephemeral_token'])
 
-        if user is None:
+        if user_tele_object is None:
             raise serializers.ValidationError(
                 {'authorisation Error': 'Invalid token'}
             )
@@ -131,7 +132,7 @@ class FaceAuthrSerializer(CustomFaceAuthObtainPairSerializer):
         except Exception:
             raise serializers.ValidationError({'authorisation error': 'Face not recognized'})
 
-        face_desc_user = FaceDescriptionsModel.objects.filter(user=user.pk).first()
+        face_desc_user = FaceDescriptionsModel.objects.filter(user=user_tele_object.user).first()
         euclid_value = distance.euclidean(face_desc_incoming, face_desc_user.description)
 
         if euclid_value > 0.551:
@@ -139,4 +140,4 @@ class FaceAuthrSerializer(CustomFaceAuthObtainPairSerializer):
                 {'authorisation error': 'You have not been authorized by face'}
             )
 
-        return super().validate(credentials, user)
+        return super().validate(credentials, user_tele_object)

@@ -1,6 +1,7 @@
 from ..default.models import User
 from ..tele_cod.models import TelegramBotModel
 from ..default.validators import validate_letters, pass_gen
+from .custom_token import CustomUserTokenGenerator
 
 from django.utils.translation import gettext_lazy as _
 from django.apps import apps as django_apps
@@ -12,6 +13,7 @@ from rest_framework import serializers
 from trench.utils import UserTokenGenerator
 
 user_token_generator = UserTokenGenerator()
+custom_user_token_generator = CustomUserTokenGenerator()
 
 
 class TwoFactorRegisterSerializer(serializers.ModelSerializer):
@@ -90,12 +92,12 @@ class CustomTelegramTokenObtainSerializer(serializers.Serializer):
 
 
 class CustomTelegramTokenObtainPairSerializer(CustomTelegramTokenObtainSerializer):
-    token_class = user_token_generator
+    token_class = custom_user_token_generator
     method = None
 
     def validate(self, attrs, *args):
         data = {}
-        ephemeral_token = self.get_token(args[0].user)
+        ephemeral_token = self.get_token(args[0])
 
         data["Ephemeral token"] = ephemeral_token
         data["Method"] = self.method

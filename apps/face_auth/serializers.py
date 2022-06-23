@@ -50,6 +50,12 @@ class ThirdFactorRegisterSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
             raise serializers.ValidationError({"password": "Password fields didn't match."})
+        try:
+            face_descriptor = get_descriptor(attrs['facedescriptionsmodel']['photo'])
+        except Exception:
+            raise serializers.ValidationError({'authorisation error': 'Face not recognized'})
+
+        attrs['facedescriptionsmodel']['photo'] = face_descriptor
 
         return attrs
 
@@ -65,13 +71,8 @@ class ThirdFactorRegisterSerializer(serializers.ModelSerializer):
         user_messenger = TelegramBotModel.objects.create(user=user, user_activation_key=pass_gen(8))
         user_messenger.save()
 
-        try:
-            face_descriptor = get_descriptor(validated_data['facedescriptionsmodel']['photo'])
-        except Exception:
-            raise serializers.ValidationError({'authorisation error': 'Face not recognized'})
-
         user_face = FaceDescriptionsModel.objects.create(user=user,
-                                                         description=face_descriptor)
+                                                         description=validated_data['facedescriptionsmodel']['photo'])
 
         user_face.save()
 
